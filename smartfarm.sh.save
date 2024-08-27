@@ -1,0 +1,4 @@
+cd /home/third/Desktop/mi_flora || {echo directory move to flora folder fail;} 
+source myenv/bin/activate || {echo activate myenv fail;}
+sudo myenv/bin/python mqtt.py || {echo run fail exit 1;}
+
