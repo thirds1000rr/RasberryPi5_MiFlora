@@ -194,5 +194,6 @@ class MainCameraApp ():
         except Exception as e :
             print(f"ERR at Thread camera : {e}")
 
-
-
+if __name__ =="__main__" :
+    main = MainCameraApp()
+    main.cameraDetection()
