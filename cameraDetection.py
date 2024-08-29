@@ -2,6 +2,7 @@ from picamera2 import Picamera2
 import cv2
 import numpy as np
 
+
 # Initialize the camera
 picam2 = Picamera2()
 picam2.configure(picam2.create_still_configuration())
