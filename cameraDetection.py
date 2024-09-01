@@ -7,25 +7,13 @@ import numpy as np
 from PyQt5.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QMainWindow
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtCore import QTimer
-from models.experimental import attempt_load
-from utils.general import non_max_suppression, scale_coords, xyxy2xywh
-from utils.torch_utils import select_device
+from yolov5.models.experimental import attempt_load
+from yolov5.utils.general import non_max_suppression, scale_coords, xyxy2xywh
+from yolov5.utils.torch_utils import select_device
 from picamera2 import Picamera2
-from line_notify import msgWithPic  # Assuming you have a function for Line notification
-import firebase_admin
-from firebase_admin import credentials
-from firebase_admin import db
 from datetime import datetime
 import base64
 #import L76X
-
-# Initialize Firebase Realtime Database
-cred = credentials.Certificate("serviceAccountKey.json")
-firebase_admin.initialize_app(cred, {
-    'databaseURL': 'https://wildfiredb-a5678-default-rtdb.asia-southeast1.firebasedatabase.app/'
-})
-ref = db.reference('detections')
-
 
 class CameraApp(QWidget):
     def __init__(self):
@@ -37,6 +25,7 @@ class CameraApp(QWidget):
         self.setLayout(self.layout)
         
         self.picam2 = Picamera2()
+        #Size and color format 
         self.picam2.configure(self.picam2.create_preview_configuration(main={"format": 'XRGB8888', "size": (640, 480)}))
 
         self.picam2.start()
@@ -110,7 +99,7 @@ class CameraApp(QWidget):
                     label = f'{object_name} {conf:.2f}'
                     
                     text = f'{object_name}: {conf:.2f}'
-
+                    #create retangle
                     cv2.rectangle(frame_copy, (int(box[0]), int(box[1])), (int(box[0] + box[2]), int(box[1] + box[3])), (255, 0, 0), 2)
                     cv2.putText(frame_copy, text, (int(box[0]), int(box[1]) - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
                     cv2.putText(frame_copy, label, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0), 2)  # Add label to the frame
@@ -157,7 +146,7 @@ class CameraApp(QWidget):
 
                     message += label
 
-                    msgWithPic(message, image_path)
+                    # msgWithPic(message, image_path)
                     
                 # Send data to Firebase Realtime Database
                     # Read image file as binary data
@@ -168,17 +157,6 @@ class CameraApp(QWidget):
                     encoded_image = base64.b64encode(image_data).decode("utf-8")
 
                     date = time.strftime("%d.%m.%Y", time.localtime(time.time()))
-                    current_time = datetime.now().strftime('%I:%M:%S %p')  # Format as HH:MM:SS AM/PM
-                    ref.push({
-                    'type': object_name,
-                    'confidence': conf.item(),  
-                    'date': date,
-                    'time': current_time,
-                    'detected_image': encoded_image,
-                    'latitude': "null",  # Store latitude value
-                    'longitude': "null",  # Store longitude value
-                    })
-                
                     
             img = QImage(frame_copy.data.tobytes(), 640, 480, QImage.Format_RGB888)
             pixmap = QPixmap.fromImage(img)
@@ -206,6 +184,7 @@ def main():
 
     camera_app.picam2.stop()
     sys.exit(app.exec_())
+
 
 if _name_ == '_main_':
     main()
