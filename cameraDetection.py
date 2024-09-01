@@ -12,7 +12,6 @@ from utils.general import non_max_suppression, scale_coords, xyxy2xywh
 from utils.torch_utils import select_device
 from picamera2 import Picamera2
 from line_notify import msgWithPic  # Assuming you have a function for Line notification
-import firebase_admin
 from datetime import datetime
 import base64
 #import L76X
