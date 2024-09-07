@@ -1,4 +1,4 @@
-#!/home/third/Documents/GitHub/RasberryPi4_MiFlora/.venv/bin/python3
+#!/home/third/Documents/GitHub/RasberryPi4_MiFlora/.venv/bin/python3.11
 # -*- coding: utf-8 -*-
 import re
 import sys
