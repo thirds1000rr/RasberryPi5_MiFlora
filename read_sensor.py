@@ -1,10 +1,8 @@
-import datetime
+from datetime import datetime
 import time
-import pytz
 from miflora.miflora_poller import MiFloraPoller
 from btlewrap.bluepy import BluepyBackend
 
-now_gmt7 = datetime.datetime.now(pytz.timezone('Asia/Bangkok')).isoformat()
 # formatted_time = now_gmt7.strftime("%Y-%m-%dT%H:%M:%S%z")
 
 def read_mi_flora_data(mac_address , delay = 2):
@@ -23,7 +21,7 @@ def read_mi_flora_data(mac_address , delay = 2):
                 "light": light if light else None,
                 "conductivity": conductivity if conductivity else None,
                 "battery": battery if battery else None,
-                "timestamp": str(now_gmt7)
+                "timestamp": datetime.now().isoformat()
             }
 
             return data
@@ -40,7 +38,7 @@ def read_mi_flora_data(mac_address , delay = 2):
                     "battery":  None,
                     "timestamp": None
                 }
-            return  data 
+            return data 
         finally:
             if 'poller' in locals():
                 del poller

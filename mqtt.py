@@ -4,10 +4,11 @@ import paho.mqtt.client as mqtt
 import ssl
 import time
 import pytz
-from ble_scanner import main as scan
+import asyncio
+from ble_scanner import main
 from read_sensor import read_mi_flora_data
 from gpio import GPIOController
-from utilities.notify import lineController
+from utilities.notify import LineController
 from datetime import datetime, timedelta
 
 
@@ -74,9 +75,9 @@ class MQTTClient:
     def calculateAndPublishAverages(self , data_json = None):
         try:
             print(f"Data count  : {len(data_storage)}")
-            now = datetime.now(pytz.timezone('Asia/Bangkok'))
+            now = datetime.now()
             ten_minutes_ago = now-timedelta(minutes=1)
-            ten_minutes_ago = ten_minutes_ago.isoformat()
+            # ten_minutes_ago = ten_minutes_ago.isoformat()
             print(f"ten_minutes_ago {ten_minutes_ago} ")
         
             for sensor_id, data_list in data_storage.items():
@@ -85,7 +86,6 @@ class MQTTClient:
                     # print(f"ten_minutes_ago: {ten_minutes_ago}")
                     avg_data_time_check = [d for d in data_list if d['timestamp'] >= ten_minutes_ago]
                     print(f"Time calculate : {ten_minutes_ago}")
-                    print(f"time  : {[datetime.fromisoformat(d['timestamp'])  for d in data_list]}")
                     avg_temp = None
                     avg_humid = None
                     print(f"Data AVG TIME CHECK : {avg_data_time_check}")
@@ -106,7 +106,7 @@ class MQTTClient:
                                 "sensor_id": sensor_id,
                                 "average_temperature": avg_temp,
                                 "average_humidity": avg_humid,
-                                "timestamp": now.isoformat()
+                                "timestamp": datetime.now()
                             })
                     
                     # Publish to MQTT
@@ -177,7 +177,7 @@ class MQTTClient:
     def handle_scan_sensor(self, payload):
         if payload == "true":
             time.sleep(1)
-            result = scan()
+            result = asyncio.run(main())
             print("Scan result:", result)
             payload_str = json.dumps(result)
             print("Payload to publish:", payload_str)
@@ -195,6 +195,7 @@ class MQTTClient:
                     else:
                         print(f"Failed to publish, result code: {success.rc}")
 
+                publish_event = threading.Event() #Thread Event 
                 publish_thread = threading.Thread(target=publish_and_signal, args=(self.client, payload_str, publish_event))
                 publish_thread.start()
 
@@ -257,7 +258,7 @@ class MainApp:
             print(f"Update Gpio : {gpio} to database after exceed to time duration")
     def start(self):
         self.mqtt_client.connect()
-        msg_start = lineController()
+        msg_start = LineController()
         msg_start.lineNotify("Raspberry Pi Start up ")
         while not self.exit_flag:
             self.mqtt_client.calculateAndPublishAverages()

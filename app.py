@@ -1,8 +1,9 @@
 from mqtt import MainApp
-# from cameraDetection import MainCameraApp
+import threading
+from yolov5.cameraDetection import start
 
 if __name__ =="__main__" : 
-    # camera = MainCameraApp()
-    # camera.startCamera()
-    main = MainApp()
-    main.start()
+    camera_thread = threading.Thread(target=start)
+    camera_thread.start()
+    main_app = MainApp()
+    main_app.start()
