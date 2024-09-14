@@ -51,6 +51,8 @@ class MQTTClient:
         self.broker_port = broker_port
         self.read_publish_flag = True
         self.thread_list = []
+        self.instance_GpioController = GPIOController()
+
 
     def connect(self):
         try:
@@ -142,11 +144,10 @@ class MQTTClient:
                 self.thread_list.append(read_publish_thread)
             elif topic == "state":
                 parseJson = json.loads(payload)
-                instance_GpioController = GPIOController()
                 user_id = parseJson["user_id"]
                 return_topic="/state"
                 topic = user_id+return_topic
-                result_gpio = instance_GpioController.decision(parseJson)
+                result_gpio = self.instance_GpioController.decision(parseJson)
                 if result_gpio:
                     self.publish(topic,json.dumps(True))
                 else:
@@ -218,7 +219,7 @@ class MQTTClient:
                     print(f"Processing sensor: {sensor}")
                     try:
                         result = read_mi_flora_data(mac_sensor)
-                        print("before next ")
+                        print(f"before next {result}")
                         data.append(result)
                         
                        

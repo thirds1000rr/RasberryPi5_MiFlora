@@ -1,19 +1,11 @@
-import gpiod
-import time
+from gpiozero import OutputDevice
+from time import sleep
 
-LED_PIN = 17  # GPIO17 (Pin 11 on RPi)
-chip = gpiod.Chip('gpiochip0')  # Using gpiochip4
+led_pin = 17
+led = OutputDevice(led_pin, active_high=False, initial_value=False)
 
-led_line = chip.get_line(LED_PIN)
-led_line.request(consumer="LED", type=gpiod.LINE_REQ_DIR_OUT)
-
-
-try:
-    while True:
-        print("test begin")
-        led_line.set_value(1)  # Turn LED on
-        time.sleep(1)
-        led_line.set_value(0)  # Turn LED off
-        time.sleep(1)
-finally:
-    led_line.release()
+while True:
+    led.on()
+    sleep(1)
+    led.off()
+    sleep(1)
