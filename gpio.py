@@ -1,9 +1,10 @@
-import RPi.GPIO as GPIO
+import gpiod
 import time
 import threading
 
 active_gpio_auto = []
-active_gpio_manual=[]
+active_gpio_manual = []
+
 class GPIOController:
     def __init__(self):
         self.gpio_fan = 10
@@ -11,10 +12,11 @@ class GPIOController:
         self.work_temp = 35
         self.min_humid = 40
         self.max_humid = 55
-        self.POWER_ON = GPIO.HIGH
-        self.POWER_OFF = GPIO.LOW
-        GPIO.setmode(GPIO.BOARD)
-        # GPIO.setup(self.gpio_fan, GPIO.OUT)
+        self.POWER_ON = 0  # Active low
+        self.POWER_OFF = 1  # Active low
+        self.chip = gpiod.Chip('gpiochip0')  # Use the appropriate gpiochip
+        self.pi = self.chip.get_line(self.gpio_fan)
+        self.pi.request(consumer="GPIOController", type=gpiod.LINE_REQ_DIR_OUT)
 
     def decision(self, payload):
         gpio = int(payload["gpio_id"])
@@ -24,10 +26,9 @@ class GPIOController:
         humid = payload.get("humid", None)
 
         try:
-            
             if gpio not in active_gpio_auto:
-                GPIO.setup(gpio, GPIO.OUT)
-                # GPIO.output(gpio, GPIO.LOW)
+                line = self.chip.get_line(gpio)
+                line.request(consumer="GPIOController", type=gpiod.LINE_REQ_DIR_OUT)
                 if mode and temperature is not None and humid is not None:  # Auto mode
                     try:
                         active_gpio_auto.append(gpio)
@@ -46,20 +47,20 @@ class GPIOController:
                         if gpio in active_gpio_auto:
                             active_gpio_auto.remove(gpio)
                         return False
-                elif not mode :  # Manual mode
-                    try: 
-                        print(f"receive manual {mode} , {power}")
+                elif not mode:  # Manual mode
+                    try:
+                        print(f"Receive manual {mode} , {power}")
                         if power and gpio not in active_gpio_manual:
                             active_gpio_manual.append(gpio)
                             print(f"Arr after append {active_gpio_manual}")
-                            GPIO.output(gpio ,self.POWER_ON)
+                            line.set_value(self.POWER_ON)
                             return True
-                        elif not power and gpio in active_gpio_manual :
-                            GPIO.output(gpio , self.POWER_OFF)
+                        elif not power and gpio in active_gpio_manual:
+                            line.set_value(self.POWER_OFF)
                             active_gpio_manual.remove(gpio)
                             print(f"Arr after delete {active_gpio_manual}")
                             return True
-                    except Exception as e :
+                    except Exception as e:
                         print(e)
                 else:
                     print(f"Received Temp: {temperature}, Humid: {humid}")
@@ -72,10 +73,12 @@ class GPIOController:
 
     def controllGpioAuto(self, gpio, duration=None, power=None):
         try:
+            line = self.chip.get_line(gpio)
+            line.request(consumer="GPIOController", type=gpiod.LINE_REQ_DIR_OUT)
             if duration and not power:
-                GPIO.output(gpio, self.POWER_ON)
+                line.set_value(self.POWER_ON)
                 time.sleep(duration)
-                GPIO.output(gpio, self.POWER_OFF)
+                line.set_value(self.POWER_OFF)
                 active_gpio_auto.remove(gpio)
         except Exception as e:
             if gpio in active_gpio_auto:
@@ -84,24 +87,7 @@ class GPIOController:
                 active_gpio_manual.remove(gpio)
             print(f"Error at controllGpioAuto: {e}")
 
-    # def controllGpioManual(self, gpio, power):
-    #     try:
-    #         if power and gpio not in active_gpio_manual:
-    #             GPIO.output(gpio, self.POWER_ON)
-    #             active_gpio_manual.append(gpio)
-    #             print(f"Manual Mode On : {power}\n , {active_gpio_manual}")
-    #             return True
-    #         elif not power and gpio in active_gpio_manual:
-    #             active_gpio_manual.remove(gpio)
-    #             # GPIO.output(gpio, self.POWER_OFF)
-    #             GPIO.cleanup(gpio)
-    #             print(f"Manual Mode OFF : {power}\n , {active_gpio_manual}")
-    #             return True
-    #         else:
-    #             return False
-    #     except Exception as e:
-    #         if gpio in active_gpio_manual:
-    #             active_gpio_manual.remove(gpio)
-    #         print(f"Error at controllGpioManual: {e}")
-    #         return False
+    def cleanup(self):
+        self.chip.close()  # Close the chip to release resources
+
 
