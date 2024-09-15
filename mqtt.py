@@ -10,6 +10,7 @@ from read_sensor import read_mi_flora_data
 from gpio import GPIOController
 from utilities.notify import LineController
 from datetime import datetime, timedelta
+# from yolov5.cameraDetection import start_detection
 
 
 
@@ -140,14 +141,24 @@ class MQTTClient:
                 print("Received scan_sensor")
                 self.handle_scan_sensor(payload)
             elif topic == "userValid":
-                read_publish_thread = threading.Thread(target=self.read_and_publish, args=(client, payload))
-                self.thread_list.append(read_publish_thread)
+                # read_publish_thread = threading.Thread(target=self.read_and_publish, args=(client, payload))
+                self.thread_list.append(payload)
             elif topic == "state":
-                parseJson = json.loads(payload)
+                try:
+                    parseJson = json.loads(payload)
+                except json.JSONDecodeError:
+                    print("Error decoding JSON payload.")
+                
+                gpio = parseJson.get("gpio_id")
+                mode = parseJson.get("mode", 0)  # Default to 0 if not provided
+                power = parseJson.get("power", 0)  # Default to 0 if not provided
+                user_id = parseJson.get("user_id")  # Required field
+
+
                 user_id = parseJson["user_id"]
                 return_topic="/state"
                 topic = user_id+return_topic
-                result_gpio = self.instance_GpioController.decision(parseJson)
+                result_gpio = self.instance_GpioController.decision(gpio_receive=gpio , mode_receive=mode , power_receive=power)
                 if result_gpio:
                     self.publish(topic,json.dumps(True))
                 else:
@@ -216,21 +227,25 @@ class MQTTClient:
                 for sensor in sensors:
                     mac_sensor = sensor['macAddress']
                     id_sensor = sensor['id']
+                    gpio = sensor['gpio']
+                    mode = sensor['mode']
+                    power = sensor['power']
                     print(f"Processing sensor: {sensor}")
                     try:
                         result = read_mi_flora_data(mac_sensor)
+                        # TimeSeriesInstance = TimeSeries()
+                        # TimeSeriesInstance.collectData(id_sensor, result)
                         print(f"before next {result}")
                         data.append(result)
-                        
-                       
                     except Exception as e:
                         print(f"Error reading sensor {sensor}: {e}")
+                    finally : 
                         time.sleep(2)  # Wait before retrying
+                        res = self.instance_GpioController.decision(result , gpio , mode , power)
+                        print(f"result of decision auto {res}")
+                    
                 topic = f"{username}/flora"
                 try:
-                    
-                    # TimeSeriesInstance = TimeSeries()
-                    # TimeSeriesInstance.collectData(id_sensor, result)
                     if self.publish(topic, json.dumps(data)):
                         print(f"Published data")
                 except Exception as e:
@@ -253,22 +268,29 @@ class MainApp:
             username="third",
             password="Third0804151646"
         )
+        # self.start_detection()
 
-    def update_gpio(self,gpio,topic ="state_update"):
-        if self.mqtt_client.publish(gpio,topic) : 
-            print(f"Update Gpio : {gpio} to database after exceed to time duration")
+    # def update_gpio(self,gpio,topic ="state_update"):
+    #     if self.mqtt_client.publish(gpio,topic) : 
+    #         print(f"Update Gpio : {gpio} to database after exceed to time duration")
     def start(self):
         self.mqtt_client.connect()
         msg_start = LineController()
+        # camera_thread = threading.Thread(target= start_detection)
         msg_start.lineNotify("Raspberry Pi Start up ")
+        # camera_thread.start()
+
         while not self.exit_flag:
             self.mqtt_client.calculateAndPublishAverages()
             print("Main application is running...")
             print(f"Length of thread list: {len(self.mqtt_client.thread_list)}")
-            for thread in self.mqtt_client.thread_list:
-                thread.start()
-                thread.join()
-                self.mqtt_client.thread_list.remove(thread)
+            if len(self.mqtt_client.thread_list) != 0:
+                for thread in self.mqtt_client.thread_list:
+                    thread_read = threading.Thread(target=self.mqtt_client.read_and_publish, args=(self.mqtt_client, thread))
+                    thread_read.start()
+                    thread_read.join()
+                    self.mqtt_client.thread_list.remove(thread)
             time.sleep(3)
+
 
 

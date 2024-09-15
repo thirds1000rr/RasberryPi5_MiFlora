@@ -15,7 +15,7 @@ class GPIOController:
         self.lines = {}  # To store GPIO OutputDevice objects
         self.fan_setup = gpiozero.OutputDevice(self.gpio_fan, active_high=False, initial_value=True)
         self.fan_setup.on()
-
+    
     def setUpGpio(self, gpio):
         try:
             if gpio not in self.lines:
@@ -25,34 +25,48 @@ class GPIOController:
         except Exception as e:
             print(f"Error during setup GPIO {gpio}: {e}")
 
-    def decision(self, payload):
-        gpio = int(payload["gpio_id"])
-        mode = payload["mode"]
-        power = payload["power"]
-        temperature = payload.get("temperature", None)
-        humid = payload.get("humid", None)
-
+    def decision(self, payload=None, gpio_receive=None , mode_receive=None , power_receive=None):
         try:
+            # Check if payload is a dictionary
+            # print(f"Type of payload: {type(payload)}")
+            # print(f"Decision \n{payload}\n GPIO : {gpio_receive}")
+            if payload :
+                gpio = int(gpio_receive)
+                mode = mode_receive
+                power = power_receive
+                temperature = payload.get("temperature", None)
+                humid = payload.get("moisture", None)
+            else : 
+                mode = mode_receive
+                power = power_receive
+                gpio = int(gpio_receive)
+
+
+        
             if gpio not in active_gpio_auto:
                 if mode and temperature is not None and humid is not None:  # Auto mode
                     try:
-                        active_gpio_auto.append(gpio)
-                        relay = self.setUpGpio(gpio)
                         if temperature >= self.work_temp and self.min_humid <= humid <= self.max_humid:
+                            active_gpio_auto.append(gpio)
+                            relay = self.setUpGpio(gpio)
                             waterPump_thread = threading.Thread(target=self.controllGpioAuto, args=(gpio, 5, power, 60))
                             waterPump_thread.start()
                             print("Auto 1")
                             return True
                         elif temperature < self.work_temp and humid < self.min_humid:
+                            active_gpio_auto.append(gpio)
+                            relay = self.setUpGpio(gpio)
                             waterPump_thread = threading.Thread(target=self.controllGpioAuto, args=(gpio, 10, power, 120))
                             waterPump_thread.start()
                             print("Auto 2")
                             return True
-                    except Exception as e:
-                        print(f"Error in Decision Auto mode: {e}")
+                    except Exception as err:
                         if gpio in active_gpio_auto:
                             active_gpio_auto.remove(gpio)
+                        print(f"Err in Auto mode {err}")
                         return False
+                    finally:
+                        self.Autofan()
                 elif not mode :  # Manual mode
                     try:
                         print(f"Received manual mode: {mode}, power: {power}")
@@ -75,6 +89,8 @@ class GPIOController:
                 else:
                     print(f"Received Temp: {temperature}, Humid: {humid}")
                     return False
+            elif power is None and mode is None : 
+                return False
             else:
                 print(f"GPIO {gpio} is already in use.")
                 return False
