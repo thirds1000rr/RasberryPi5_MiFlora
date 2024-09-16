@@ -212,7 +212,7 @@ class MQTTClient:
             except Exception as e:
                 print(f"Error during publish: {e}")
 
-    def read_and_publish(self, client, payload):
+    def read_and_publish(self, client, payload, delay=5):
         try:
             data_detail = json.loads(payload)
             print(f"Received JSON payload: {data_detail}")
@@ -249,7 +249,7 @@ class MQTTClient:
                 except Exception as e:
                     print(f"Failed to publish data to topic '{topic}': {data}")
                     print(e)
-                time.sleep(2)  # Sleep 2 seconds before reading for the next user
+                time.sleep(delay)  # Sleep 5 seconds before reading for the next user
         except json.JSONDecodeError as e:
             print(f"Error decoding JSON: {e}")
         except Exception as err:
