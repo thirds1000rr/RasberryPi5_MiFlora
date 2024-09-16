@@ -5,7 +5,7 @@ from btlewrap.bluepy import BluepyBackend
 
 # formatted_time = now_gmt7.strftime("%Y-%m-%dT%H:%M:%S%z")
 
-def read_mi_flora_data(mac_address , delay = 2):
+def read_mi_flora_data(mac_address , delay = 5):
         try:
             poller = MiFloraPoller(mac_address, BluepyBackend)
 

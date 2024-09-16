@@ -212,7 +212,7 @@ class MQTTClient:
             except Exception as e:
                 print(f"Error during publish: {e}")
 
-    def read_and_publish(self, client, payload , temperature_threshold  = 31 , moisture_thershold = 28 ):
+    def read_and_publish(self, client, payload):
         try:
             data_detail = json.loads(payload)
             print(f"Received JSON payload: {data_detail}")
@@ -220,7 +220,7 @@ class MQTTClient:
             for user in data_detail:
                 username = user["username"]
                 sensors = user["sensors"]
-                data = []  # Reset data list every time when start with new user
+                data = []  # Reset data arr list every time when start with new user
 
                 for sensor in sensors:
                     mac_sensor = sensor['macAddress']
@@ -233,7 +233,6 @@ class MQTTClient:
                         result = read_mi_flora_data(mac_sensor)
                         if result['temperature'] is not None or result['moisture'] is not None:
                             self.timeSeries.collectData(id_sensor, result)
-                            return
                         print(f"before next {result}")
                         data.append(result)
                     except Exception as e:
