@@ -24,7 +24,6 @@ class TimeSeries :
      
     def collectData(self, sensor_id, payload):
         try:
-            # Access data_storage through the instance of MQTTClient
             self.mqtt_client.data_storage.setdefault(sensor_id, []).append({
                 "temperature": payload["temperature"],
                 "moisture": payload["moisture"],
@@ -48,8 +47,8 @@ class MQTTClient:
         self.broker_url = broker_url
         self.broker_port = broker_port
         self.read_publish_flag = True
-        self.data_storage = {}  # Initialize your data storage here
-        self.last_publish_time = {}  # Track last publish time for each sensor
+        self.data_storage = {}  
+        self.last_publish_time = {}  
         self.thread_list = []
         self.instance_GpioController = GPIOController()
         self.timeSeries = TimeSeries(self)
@@ -149,9 +148,9 @@ class MQTTClient:
                     print("Error decoding JSON payload.")
                 
                 gpio = parseJson.get("gpio_id")
-                mode = parseJson.get("mode", 0)  # Default to 0 if not provided
-                power = parseJson.get("power", 0)  # Default to 0 if not provided
-                user_id = parseJson.get("user_id")  # Required field
+                mode = parseJson.get("mode", 0)  
+                power = parseJson.get("power", 0)  
+                user_id = parseJson.get("user_id")  
 
 
                 user_id = parseJson["user_id"]
@@ -194,19 +193,19 @@ class MQTTClient:
             print("Payload to publish:", payload_str)
 
             try:
-                publish_event = threading.Event() #Thread Event 
+                publish_event = threading.Event() 
 
                 def publish_and_signal(client, payload_str, publish_event):
                     topic = "sensors_lists"
                     success = client.publish(topic, payload_str)
                     
-                    if success.rc == 0:  # Check the MQTT success code
+                    if success.rc == 0:  
                         print("Published successfully")
-                        publish_event.set()  # Signal main thread when publish is done
+                        publish_event.set()  
                     else:
                         print(f"Failed to publish, result code: {success.rc}")
 
-                publish_event = threading.Event() #Thread Event 
+                publish_event = threading.Event() 
                 publish_thread = threading.Thread(target=publish_and_signal, args=(self.client, payload_str, publish_event))
                 publish_thread.start()
 
@@ -240,7 +239,7 @@ class MQTTClient:
                     except Exception as e:
                         print(f"Error reading sensor {sensor}: {e}")
                     finally : 
-                        time.sleep(2)  # Wait before retrying
+                        time.sleep(2)
                         res = self.instance_GpioController.decision(result , gpio , mode , power)
                         print(f"result of decision auto {res}")
                     
