@@ -18,23 +18,20 @@ data_storage ={}
 gmt7_timezone = pytz.timezone('Asia/Bangkok')
 
 class TimeSeries : 
-    def collectData(self , sensor_id, payload):
+    def __init__(self,mqtt_client):
+        self.mqtt_client = mqtt_client
+     
+     
+    def collectData(self, sensor_id, payload):
         try:
-            if sensor_id not in data_storage:
-                data_storage[sensor_id] = []
-                data_storage[sensor_id].append({
+            # Access data_storage through the instance of MQTTClient
+            self.mqtt_client.data_storage.setdefault(sensor_id, []).append({
                 "temperature": payload["temperature"],
                 "moisture": payload["moisture"],
                 "timestamp": payload["timestamp"]
             })
-            else:
-                data_storage[sensor_id].append({
-                    "temperature": payload["temperature"],
-                    "moisture": payload["moisture"],
-                    "timestamp": payload["timestamp"]
-                })
-
-            print(f"Structure of data collected: {data_storage}")
+            print(f"Structure of data collected: {self.mqtt_client.data_storage}")
+            self.mqtt_client.calculateAndPublishAverages(sensor_id)
             return True
         except Exception as e:
             print(f"ERR collect payload: {e}")
@@ -51,8 +48,11 @@ class MQTTClient:
         self.broker_url = broker_url
         self.broker_port = broker_port
         self.read_publish_flag = True
+        self.data_storage = {}  # Initialize your data storage here
+        self.last_publish_time = {}  # Track last publish time for each sensor
         self.thread_list = []
         self.instance_GpioController = GPIOController()
+        self.timeSeries = TimeSeries(self)
 
 
     def connect(self):
@@ -75,60 +75,59 @@ class MQTTClient:
     def on_publish(self, client, userdata, mid):
         print(f"Message {mid} published")
 
-    def calculateAndPublishAverages(self , data_json = None):
+    def calculateAndPublishAverages(self, sensor_id):
+        """Calculates averages of temperature and moisture, then publishes the result if 10 minutes have passed since the last publish."""
         try:
-            print(f"Data count  : {len(data_storage)}")
             now = datetime.now()
-            ten_minutes_ago = now-timedelta(minutes=1)
-            # ten_minutes_ago = ten_minutes_ago.isoformat()
-            print(f"ten_minutes_ago {ten_minutes_ago} ")
-        
-            for sensor_id, data_list in data_storage.items():
-                if data_list:
-                # Filter data within the last 10 minutes
-                    # print(f"ten_minutes_ago: {ten_minutes_ago}")
-                    avg_data_time_check = [d for d in data_list if d['timestamp'] >= ten_minutes_ago]
-                    print(f"Time calculate : {ten_minutes_ago}")
-                    avg_temp = None
-                    avg_humid = None
-                    print(f"Data AVG TIME CHECK : {avg_data_time_check}")
-                    if avg_data_time_check:
-                    #for in arr to check is not none
-                        valid_temps = [d['temperature'] for d in avg_data_time_check if d['temperature'] is  not None]
-                        valid_humids = [d['moisture'] for d in avg_data_time_check if d['moisture'] is not None]
-                    # Calculate averages
-                        # print(f"Sensor : {sensor_id} \n,Temp : {valid_temps} length:{len(valid_temps)} \n, Humid : {valid_humids} length:{len(valid_humids)}\n")
+            
+            ten_minutes_ago = now - timedelta(minutes=1)
 
-                        avg_temp = sum(valid_temps) / len(valid_temps) if valid_temps else 0
+            data_list = self.data_storage.get(sensor_id, [])
+
+            avg_data_time_check = [
+                d for d in data_list 
+                if datetime.fromisoformat(d['timestamp']) >= ten_minutes_ago
+            ]
+
+            last_publish = self.last_publish_time.get(sensor_id)
+            if last_publish:
+                print(f"Last publish time for Sensor {sensor_id}: {last_publish}")
+                if last_publish >= ten_minutes_ago:
+                    print(f"Not enough time has passed since the last publish for Sensor {sensor_id}")
+                    return
+            
+            if avg_data_time_check:
+                valid_temps = [d['temperature'] for d in avg_data_time_check if d['temperature'] is not None]
+                valid_humids = [d['moisture'] for d in avg_data_time_check if d['moisture'] is not None]
+
+                avg_temp = sum(valid_temps) / len(valid_temps) if valid_temps else 0
+                avg_humid = sum(valid_humids) / len(valid_humids) if valid_humids else 0
+
+                data_json = json.dumps({
+                    "sensor_id": sensor_id,
+                    "average_temperature": avg_temp,
+                    "average_humidity": avg_humid,
+                    "timestamp": now.isoformat()
+                })
+
+                if data_json:
+                    print(f"Data before publish: {data_json}")
+                    if self.publish("timeSeries", data_json):
+                        print(f"Publish for Sensor {sensor_id}: {data_json}")
                         
-                        avg_humid = sum(valid_humids) / len(valid_humids) if valid_humids else 0
-                        print(f"AVG_TEMP : {avg_temp} , AVG_HUMID : {avg_humid}")
-
-                        print(f"{avg_temp} , {avg_humid}")
-                        data_json = json.dumps({
-                                "sensor_id": sensor_id,
-                                "average_temperature": avg_temp,
-                                "average_humidity": avg_humid,
-                                "timestamp": datetime.now()
-                            })
-                    
-                    # Publish to MQTT
-                    try:
-                        if data_json : 
-                            print(f"Data before publish :  {data_json}")
-                            # Prepare JSON payload for MQTT
-                            
-                            if self.publish("timeSeries",data_json):
-                                print(f"Publish for Sensor {sensor_id}: {data_json}")
-                                # Clear data list after published
-                                data_storage[sensor_id] = []
-                            
-                    except Exception as e :
-                        print(f"Err while publish Average {e} data will not save")
-            print(f"Don't have data to calculate in time: {data_storage}")
+                        self.last_publish_time[sensor_id] = now
+                        
+                        self.data_storage[sensor_id] = [
+                            d for d in data_list 
+                            if datetime.fromisoformat(d['timestamp']) >= ten_minutes_ago
+                        ]
+                    else:
+                        print(f"Failed to publish data for Sensor {sensor_id}")
+            else:
+                print(f"No valid data to publish for Sensor {sensor_id}")
         except Exception as e:
-            print(f"Error calculate and publish: {e}")
-            return True
+            print(f"ERR calculate and publish: {e}")
+
 
     def on_message(self, client, userdata, msg):
         try : 
@@ -233,8 +232,9 @@ class MQTTClient:
                     print(f"Processing sensor: {sensor}")
                     try:
                         result = read_mi_flora_data(mac_sensor)
-                        # TimeSeriesInstance = TimeSeries()
-                        # TimeSeriesInstance.collectData(id_sensor, result)
+                        if result['temperature'] is not None or result['moisture'] is not None:
+                            self.timeSeries.collectData(id_sensor, result)
+                            return
                         print(f"before next {result}")
                         data.append(result)
                     except Exception as e:
@@ -268,6 +268,7 @@ class MainApp:
             username="third",
             password="Third0804151646"
         )
+        self.time_series = TimeSeries(self.mqtt_client)
         # self.start_detection()
 
     # def update_gpio(self,gpio,topic ="state_update"):
@@ -281,7 +282,6 @@ class MainApp:
         # camera_thread.start()
 
         while not self.exit_flag:
-            self.mqtt_client.calculateAndPublishAverages()
             print("Main application is running...")
             print(f"Length of thread list: {len(self.mqtt_client.thread_list)}")
             if len(self.mqtt_client.thread_list) != 0:
@@ -290,7 +290,8 @@ class MainApp:
                     thread_read.start()
                     thread_read.join()
                     self.mqtt_client.thread_list.remove(thread)
-            time.sleep(3)
+            time.sleep(5)
+
 
 
 
