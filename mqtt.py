@@ -228,6 +228,7 @@ class MQTTClient:
                     gpio = sensor['gpio']
                     mode = sensor['mode']
                     power = sensor['power']
+                    name = sensor['name']
                     print(f"Processing sensor: {sensor}")
                     try:
                         result = read_mi_flora_data(mac_sensor)
@@ -239,7 +240,7 @@ class MQTTClient:
                         print(f"Error reading sensor {sensor}: {e}")
                     finally : 
                         time.sleep(2)
-                        res = self.instance_GpioController.decision(result , gpio , mode , power)
+                        res = self.instance_GpioController.decision(result , gpio , mode , power , name)
                         print(f"result of decision auto {res}")
                     
                 topic = f"{username}/flora"
