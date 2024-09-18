@@ -63,7 +63,7 @@ class GPIOController:
                             active_gpio_auto.append(gpio)
                             relay = self.setUpGpio(gpio)
                             self.line_instance.lineNotify(f"Sensor Name : {name} \nGpio:{gpio}\nWaterPump(Auto) : On")
-                            waterPump_thread = threading.Thread(target=self.controllGpioAuto, args=(gpio, 10, power, 120))
+                            waterPump_thread = threading.Thread(target=self.controllGpioAuto, args=(gpio, 10, power, 120 , name))
                             waterPump_thread.start()
                             print("Auto 2")
                             return True
