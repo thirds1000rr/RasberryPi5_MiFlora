@@ -62,7 +62,7 @@ class GPIOController:
                         elif temperature < self.work_temp and humid < self.min_humid:
                             active_gpio_auto.append(gpio)
                             relay = self.setUpGpio(gpio)
-                            self.line_instance.lineNotify(f"Sensor Name : {name} \nGpio:{gpio}\nWaterPump(Auto) : On")
+                            self.line_instance.lineNotify(f"Sensor Name :{name} \nGpio:{gpio}\nWaterPump(Auto) : On")
                             waterPump_thread = threading.Thread(target=self.controllGpioAuto, args=(gpio, 10, power, 120 , name))
                             waterPump_thread.start()
                             print("Auto 2")
@@ -81,13 +81,13 @@ class GPIOController:
                             relay = self.setUpGpio(gpio)
                             active_gpio_manual.append(gpio)
                             relay.on()
-                            print(f"Active GPIOs after append: {active_gpio_manual}")
+                            print(f"Active GPIOs after append Manual: {active_gpio_manual}")
                             return True
                         elif not power and gpio in active_gpio_manual:
                             relay = self.setUpGpio(gpio)
                             relay.off()
                             active_gpio_manual.remove(gpio)
-                            print(f"Active GPIOs after removal: {active_gpio_manual}")
+                            print(f"Active GPIOs after remove Manual: {active_gpio_manual}")
                             return True
                     except Exception as e:
                         print(e)

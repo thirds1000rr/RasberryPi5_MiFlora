@@ -4,7 +4,7 @@ from bleak import BleakScanner
 async def scan_devices():
     print("Starting BLE scan...")
     scanner = BleakScanner()
-    devices = await scanner.discover()  # Await the coroutine to get the result
+    devices = await scanner.discover()  # Await to get res
     print("Scan complete.")
 
     devices_info = []
@@ -22,6 +22,6 @@ async def scan_devices():
 
 async def main():
     devices_info = await scan_devices()
-    # Process devices info
+    #Process devices info
     print(json.dumps(devices_info, indent=2))
     return devices_info

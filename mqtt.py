@@ -144,26 +144,30 @@ class MQTTClient:
             elif topic == "state":
                 try:
                     parseJson = json.loads(payload)
+                
+                
+                    gpio = parseJson.get("gpio_id")
+                    mode = parseJson.get("mode", 0)  
+                    power = parseJson.get("power", 0)  
+                    user_id = parseJson.get("user_id")  
+                    
+
+                    user_id = parseJson["user_id"]
+                    return_topic="/state"
+                    topic = user_id+return_topic
+                    result_gpio = self.instance_GpioController.decision(gpio_receive=gpio , mode_receive=mode , power_receive=power)
+                    if result_gpio:
+                        self.publish(topic,json.dumps(True))
+                    else:
+                        self.publish(topic,json.dumps(False))
+                    # elif isinstance(result_gpio,int):
+                    #     print(f"This Gpio : {result_gpio} , Successfully operation.")
+                    #     self.publish(update_topic,result_gpio)
                 except json.JSONDecodeError:
                     print("Error decoding JSON payload.")
-                
-                gpio = parseJson.get("gpio_id")
-                mode = parseJson.get("mode", 0)  
-                power = parseJson.get("power", 0)  
-                user_id = parseJson.get("user_id")  
-
-
-                user_id = parseJson["user_id"]
-                return_topic="/state"
-                topic = user_id+return_topic
-                result_gpio = self.instance_GpioController.decision(gpio_receive=gpio , mode_receive=mode , power_receive=power)
-                if result_gpio:
-                    self.publish(topic,json.dumps(True))
-                else:
-                    self.publish(topic,json.dumps(False))
-                # elif isinstance(result_gpio,int):
-                #     print(f"This Gpio : {result_gpio} , Successfully operation.")
-                #     self.publish(update_topic,result_gpio)
+                except Exception as e :
+                    print(f"ERR at state {e} ")
+              
         except Exception  as  e :
             print(f"Err receive msg{e}")
 
@@ -221,7 +225,6 @@ class MQTTClient:
                 username = user["username"]
                 sensors = user["sensors"]
                 data = []  # Reset data arr list every time when start with new user
-
                 for sensor in sensors:
                     mac_sensor = sensor['macAddress']
                     id_sensor = sensor['id']
@@ -239,9 +242,13 @@ class MQTTClient:
                     except Exception as e:
                         print(f"Error reading sensor {sensor}: {e}")
                     finally : 
+                        if mode :
+                            res = self.instance_GpioController.decision(result , gpio , mode , power , name)
+                            print(f"result of decision auto {res}")
+                        else :
+                            print(f"Not access decision mode because of mode is {mode}")
                         time.sleep(2)
-                        res = self.instance_GpioController.decision(result , gpio , mode , power , name)
-                        print(f"result of decision auto {res}")
+                        
                     
                 topic = f"{username}/flora"
                 try:
@@ -289,7 +296,7 @@ class MainApp:
                     thread_read.start()
                     thread_read.join()
                     self.mqtt_client.thread_list.remove(thread)
-            time.sleep(5)
+            time.sleep(1)
 
 
 

@@ -7,6 +7,7 @@ from btlewrap.bluepy import BluepyBackend
 
 def read_mi_flora_data(mac_address , delay = 5):
         try:
+            print("start reading")
             poller = MiFloraPoller(mac_address, BluepyBackend)
 
             temperature = poller.parameter_value("temperature")
