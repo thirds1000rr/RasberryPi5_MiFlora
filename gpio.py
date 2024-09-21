@@ -11,7 +11,7 @@ class GPIOController:
         self.gpio_fan = 10
         self.duration = 15
         self.work_temp = 35
-        self.min_humid = 40
+        self.min_humid = 45
         self.max_humid = 55
         self.lines = {}  # To store GPIO OutputDevice obj
         self.fan_setup = gpiozero.OutputDevice(self.gpio_fan, active_high=False, initial_value=True)
