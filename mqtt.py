@@ -79,7 +79,7 @@ class MQTTClient:
         try:
             now = datetime.now()
             
-            ten_minutes_ago = now - timedelta(minutes=1)
+            ten_minutes_ago = now - timedelta(minutes=10)
 
             data_list = self.data_storage.get(sensor_id, [])
 
