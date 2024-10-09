@@ -20,6 +20,7 @@ gmt7_timezone = pytz.timezone('Asia/Bangkok')
 class TimeSeries : 
     def __init__(self,mqtt_client):
         self.mqtt_client = mqtt_client
+        
      
      
     def collectData(self, sensor_id, payload):
@@ -152,7 +153,7 @@ class MQTTClient:
                     user_id = parseJson.get("user_id")  
                     
 
-                    user_id = parseJson["user_id"]
+                    user_id = parseJson["email"]
                     return_topic="/state"
                     topic = user_id+return_topic
                     result_gpio = self.instance_GpioController.decision(gpio_receive=gpio , mode_receive=mode , power_receive=power)
@@ -201,7 +202,7 @@ class MQTTClient:
 
                 def publish_and_signal(client, payload_str, publish_event):
                     topic = "sensors_lists"
-                    success = client.publish(topic, payload_str)
+                    success = self.client.publish(topic, payload_str)
                     
                     if success.rc == 0:  
                         print("Published successfully")
