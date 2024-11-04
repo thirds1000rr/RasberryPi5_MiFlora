@@ -20,9 +20,6 @@ gmt7_timezone = pytz.timezone('Asia/Bangkok')
 class TimeSeries : 
     def __init__(self,mqtt_client):
         self.mqtt_client = mqtt_client
-        
-     
-     
     def collectData(self, sensor_id, payload):
         try:
             self.mqtt_client.data_storage.setdefault(sensor_id, []).append({
@@ -35,8 +32,6 @@ class TimeSeries :
             return True
         except Exception as e:
             print(f"ERR collect payload: {e}")
-
-
 class MQTTClient:
     def __init__(self, broker_url, broker_port, username, password):
         self.client = mqtt.Client(client_id="")
@@ -51,7 +46,7 @@ class MQTTClient:
         self.data_storage = {}  
         self.last_publish_time = {}  
         self.thread_list = []
-        self.instance_GpioController = GPIOController()
+        self.instance_GpioController = GPIOController(self)
         self.timeSeries = TimeSeries(self)
 
 
@@ -140,32 +135,30 @@ class MQTTClient:
                 print("Received scan_sensor")
                 self.handle_scan_sensor(payload)
             elif topic == "userValid":
-                # read_publish_thread = threading.Thread(target=self.read_and_publish, args=(client, payload))
-                self.thread_list.append(payload)
+                read_publish_thread = threading.Thread(target=self.read_and_publish, args=(client, payload))
+                read_publish_thread.start()
+
             elif topic == "state":
                 try:
                     parseJson = json.loads(payload)
+                    print(f"payload state {parseJson}")
                 
                 
                     gpio = parseJson.get("gpio_id")
-                    mode = parseJson.get("mode", 0)  
-                    power = parseJson.get("power", 0)  
-                    user_id = parseJson.get("user_id")  
-                    
+                    mode = parseJson.get("mode")  
+                    power = parseJson.get("power")  
 
                     user_id = parseJson["email"]
                     return_topic="/state"
                     topic = user_id+return_topic
                     result_gpio = self.instance_GpioController.decision(gpio_receive=gpio , mode_receive=mode , power_receive=power)
-                    if result_gpio:
-                        self.publish(topic,json.dumps(True))
-                    else:
-                        self.publish(topic,json.dumps(False))
+                    print(f"Res manual : {result_gpio} Gpio: {gpio}")
+                    self.publish(topic,json.dumps(result_gpio))
                     # elif isinstance(result_gpio,int):
                     #     print(f"This Gpio : {result_gpio} , Successfully operation.")
                     #     self.publish(update_topic,result_gpio)
-                except json.JSONDecodeError:
-                    print("Error decoding JSON payload.")
+                except json.JSONDecodeError as json_err :
+                    print(f"Error decoding JSON payload : {json_err}")
                 except Exception as e :
                     print(f"ERR at state {e} ")
               
@@ -223,6 +216,7 @@ class MQTTClient:
             print(f"Received JSON payload: {data_detail}")
             
             for user in data_detail:
+                user_id = user["user_id"]
                 username = user["username"]
                 sensors = user["sensors"]
                 data = []  # Reset data arr list every time when start with new user
@@ -238,13 +232,13 @@ class MQTTClient:
                         result = read_mi_flora_data(mac_sensor)
                         if result['temperature'] is not None or result['moisture'] is not None:
                             self.timeSeries.collectData(id_sensor, result)
-                        print(f"before next {result}")
+                        print(f"before next sensor {result}")
                         data.append(result)
                     except Exception as e:
                         print(f"Error reading sensor {sensor}: {e}")
                     finally : 
                         if mode :
-                            res = self.instance_GpioController.decision(result , gpio , mode , power , name)
+                            res = self.instance_GpioController.decision(user_id , result , gpio , mode , power , name)
                             print(f"result of decision auto {res}")
                         else :
                             print(f"Not access decision mode because of mode is {mode}")
@@ -276,28 +270,17 @@ class MainApp:
             password="Third0804151646"
         )
         self.time_series = TimeSeries(self.mqtt_client)
-        # self.start_detection()
 
-    # def update_gpio(self,gpio,topic ="state_update"):
-    #     if self.mqtt_client.publish(gpio,topic) : 
-    #         print(f"Update Gpio : {gpio} to database after exceed to time duration")
+   
     def start(self):
         self.mqtt_client.connect()
-        msg_start = LineController()
-        # camera_thread = threading.Thread(target= start_detection)
-        msg_start.lineNotify("Raspberry Pi Start up ")
-        # camera_thread.start()
-
+        # msg_start = LineController()
         while not self.exit_flag:
             print("Main application is running...")
             print(f"Length of thread list: {len(self.mqtt_client.thread_list)}")
-            if len(self.mqtt_client.thread_list) != 0:
-                for thread in self.mqtt_client.thread_list:
-                    thread_read = threading.Thread(target=self.mqtt_client.read_and_publish, args=(self.mqtt_client, thread))
-                    thread_read.start()
-                    thread_read.join()
-                    self.mqtt_client.thread_list.remove(thread)
-            time.sleep(1)
+            time.sleep(10)
+
+                
 
 
 

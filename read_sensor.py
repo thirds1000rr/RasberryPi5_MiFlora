@@ -1,14 +1,18 @@
 from datetime import datetime
 import time
+import signal
 from miflora.miflora_poller import MiFloraPoller
 from btlewrap.bluepy import BluepyBackend
 
 # formatted_time = now_gmt7.strftime("%Y-%m-%dT%H:%M:%S%z")
 
-def read_mi_flora_data(mac_address , delay = 5):
+def read_mi_flora_data(mac_address , delay = 5 , timeout = 5):
         try:
+
+            
             print("start reading")
             poller = MiFloraPoller(mac_address, BluepyBackend)
+           
 
             temperature = poller.parameter_value("temperature")
             moisture = poller.parameter_value("moisture")
