@@ -238,7 +238,7 @@ class MQTTClient:
                         print(f"Error reading sensor {sensor}: {e}")
                     finally : 
                         if mode :
-                            res = self.instance_GpioController.decision(user_id , result , gpio , mode , power , name)
+                            res = self.instance_GpioController.decision(id_sensor , result , gpio , mode , power , name)
                             print(f"result of decision auto {res}")
                         else :
                             print(f"Not access decision mode because of mode is {mode}")

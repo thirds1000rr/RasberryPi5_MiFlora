@@ -2,6 +2,7 @@ import time
 import threading
 import gpiozero
 import json
+from datetime import datetime
 # from mqtt import MQTTClient as mqtt
 # from utilities.notify import LineController
 
@@ -22,22 +23,23 @@ class GPIOController:
         self.fan_setup.on()
         self.mqtt_client = mqtt_client
         
-    def setupJson(self , user_id , name , gpio , status):
+    def setupJson(self ,gpio_id ,senesor_id, openedAt , closedAt ):
         try:
-        # self.line_instance.lineNotify(f"Sensor Name : {name} \nGpio:{gpio}\nWaterPump(Auto) : On")
-            data = None
-            status_check = "On" if status else "Off"
-            data = json.dumps({
-                "user_id": user_id,
-                "msg" : f"Sensor Name : {name} \nGpio:{gpio}\nWater Pump (Auto) : {status_check}"
-            })
+            data = {
+                "sensor_id" : senesor_id,
+                "gpio_id" : gpio_id,
+                "openedAt" : openedAt,
+                "closedAt" : closedAt
+            }
+            print(f"Json water Pump Log {data}")
+            data = json.dumps(data)
             return self.publish_(data)
         except Exception as e :
             print(f"Json decode err in Decision fn {e}")
 
     def publish_(self , msg):
         try :
-            self.mqtt_client.publish("notify",msg)
+            self.mqtt_client.publish("waterPumpLog",msg)
         except Exception as e : 
             print(f"publish Notify Error : {e}")
         
@@ -52,14 +54,14 @@ class GPIOController:
             return False
         
         
-    def decision(self, user_id=None ,payload=None, gpio_receive=None , mode_receive=None , power_receive=None ,name=None):
+    def decision(self, sensor_id = None ,payload=None, gpio_receive=None , mode_receive=None , power_receive=None ,name=None):
         try:
             print(mode_receive , power_receive , name)
             # Check if payload is a dictionary
             # print(f"Type of payload: {type(payload)}")
             # print(f"Decision \n{payload}\n GPIO : {gpio_receive}")
             if payload :
-                user_id = int(user_id)
+                sensor_id = int(sensor_id)
                 gpio = int(gpio_receive)
                 mode = mode_receive
                 power = power_receive
@@ -79,10 +81,9 @@ class GPIOController:
                         if temperature >= self.work_temp and self.min_humid <= humid <= self.max_humid:
                             active_gpio_auto.append(gpio)
                             relay= self.setUpGpio(gpio)
-                            waterPump_thread = threading.Thread(target=self.controllGpioAuto, args=(user_id , gpio, 5, power, 60 , name))
+                            waterPump_thread = threading.Thread(target=self.controllGpioAuto, args=(sensor_id , gpio, 5, power, 60 , name))
                             waterPump_thread.start() 
                             if waterPump_thread.is_alive():
-                                self.setupJson(user_id ,name , gpio  ,True) 
                                 print("Auto 1")
                                 return True
                             else : 
@@ -91,10 +92,9 @@ class GPIOController:
                         elif temperature < self.work_temp and humid < self.min_humid:
                             active_gpio_auto.append(gpio)
                             relay = self.setUpGpio(gpio)
-                            waterPump_thread = threading.Thread(target=self.controllGpioAuto, args=(user_id,gpio, 10, power, 120 , name))
+                            waterPump_thread = threading.Thread(target=self.controllGpioAuto, args=(sensor_id,gpio, 10, power, 120 , name))
                             waterPump_thread.start()
                             if waterPump_thread.is_alive():
-                                self.setupJson(user_id ,name , gpio ,True) 
                                 print("Auto 2")
                                 return True
                             else:
@@ -139,16 +139,18 @@ class GPIOController:
         except Exception as e:
             print(f"Error in decision GPIO controller: {e}")
 
-    def controllGpioAuto(self,user_id , gpio , duration=None , power=None , sleepduration=None,name=None):
+    def controllGpioAuto(self, sensor_id , gpio , duration=None , power=None , sleepduration=None,name=None):
         try:
             relay = self.setUpGpio(gpio)
             if duration and not power:
+                openedAt = datetime.now().isoformat()
                 relay.on()
                 time.sleep(duration)
                 relay.off()
                 time.sleep(sleepduration)
                 active_gpio_auto.remove(gpio)
-                self.setupJson(user_id , name , gpio , False )
+                closedAt = datetime.now().isoformat()
+                self.setupJson(gpio,sensor_id , openedAt ,closedAt )
         except Exception as e:
             if gpio in active_gpio_auto:
                 active_gpio_auto.remove(gpio)
