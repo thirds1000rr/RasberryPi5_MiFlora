@@ -147,10 +147,10 @@ class GPIOController:
                 relay.on()
                 time.sleep(duration)
                 relay.off()
-                time.sleep(sleepduration)
-                active_gpio_auto.remove(gpio)
                 closedAt = datetime.now().isoformat()
                 self.setupJson(gpio,sensor_id , openedAt ,closedAt )
+                time.sleep(sleepduration)
+                active_gpio_auto.remove(gpio)
         except Exception as e:
             if gpio in active_gpio_auto:
                 active_gpio_auto.remove(gpio)
