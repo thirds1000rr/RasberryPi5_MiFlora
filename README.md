@@ -8,14 +8,14 @@
 <ul>
   <li>Bovornpol Jiturai</li>
   
-   <span>Role: Backend Development & <a href=https://github.com/thirds1000rr/RasberryPi5_MiFlora>IoT Integration</a></span>
+   <span>Role: <a href=https://github.com/thirds1000rr/SmatFarm_nodejs_sql>Backend Development</a> & IoT Integration</span>
   <li>Ammar Chuapoodee</li>
     <span>Role: Flutter Mobile Application Development</span>
 </ul>
 <br>
-<h2>Server Side (Explanation):</h2>
+<h2>IoT Side (Explanation):</h2>
 <span>
-The server acts as the central controller that communicates with the Raspberry Pi every 15 seconds. It sends scanning commands and receives environmental data (e.g., temperature, humidity) and threat alerts (e.g., detected animals). The server processes this data, stores it in a database, and forwards notifications to users via a mobile app. Additionally, the server allows remote control of farm equipment (e.g., water pumps) through commands sent to the board. While the board can operate independently when needed, the server enables synchronization, logging, and centralized management of the entire system.
+The IoT system uses a Raspberry Pi 5 to collect environmental data and monitor threats in a worm farm. It connects to Xiaomi Flora sensors via Bluetooth Low Energy (BLE) to read soil temperature and moisture, and uses a connected camera running YOLO object detection to identify unwanted animals such as rats or toads. The Raspberry Pi sends sensor data and detection results to the server every 15 seconds and receives control commands in response. To reduce server dependency, the board can locally store MAC addresses and operate independently when the server is unreachable. GPIO is used to control devices like water pumps and buzzers.
 </span>
 <br>
 <h2>Dependencies</h2>
