@@ -52,4 +52,19 @@ In this project, threads are used to run MQTT communication and sensor reading i
 </span>
 
 
+<h2>How to run?</h2>
+<h3> Create VENV then activate it,for main part you can run </h3>
+<pre>
+<code>python app.py</code>
+</pre>
+<br>
+<h3>For run object detection you have to <b>create new terminal and activate VENV then </b></h3>
+<pre>
+<code>
+python cameraDetection.py
+</code>
+</pre>
+
+
+
 
