@@ -10,7 +10,7 @@
   
    <span>Role: <a href=https://github.com/thirds1000rr/SmatFarm_nodejs_sql>Backend Development</a> & IoT Integration</span>
   <li>Ammar Chuapoodee</li>
-    <span>Role: Flutter Mobile Application Development</span>
+    <span>Role: <a href=https://github.com/mmarchu/Earthworms-SmartFarm>Flutter Mobile Application Development</a></span>
 </ul>
 <br>
 <h2>IoT Side (Explanation):</h2>
